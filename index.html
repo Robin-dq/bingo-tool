@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO 完全版（名前入り保存・Safari対応・FREE無効）</title>
+<title>BINGO 完全版（保存ズレ修正・名前入り・Safari対応）</title>
 
 <!-- Noto Sans JP 太字 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,22 +61,24 @@ body {
   z-index: 20;
 }
 
-/* 保存用実寸レイヤー */
+/* ★ 保存用（ズレ防止：画面内に置き visibility:hidden） */
 #export-area {
   position: absolute;
   width: 1448px;
   height: 2048px;
-  left: -20000px;
+  left: 0;
   top: 0;
-  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
   background: white;
+  overflow: hidden;
   font-family: 'Noto Sans JP', sans-serif;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO（名前入り保存対応）</h2>
+<h2>BINGO（保存ズレ修正版 / Safari対応）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -85,17 +87,17 @@ body {
 
 <!-- 名前入力欄 -->
 <div style="margin-top:20px;">
-  <input id="username" type="text" placeholder="名前（保存時に画像右下へ）"
+  <input id="username" type="text" placeholder="名前（保存時に右下へ入る）"
          style="font-size:20px;padding:6px;width:260px;">
 </div>
 
-<!-- 保存用レイヤー -->
+<!-- 実寸描画エリア -->
 <div id="export-area"></div>
 
 <select id="word-list" style="margin-top:20px;font-size:20px;padding:6px;">
   <option value="">曲を選択</option>
 
-  <!-- ★ 全曲リスト（省略せず入っています） -->
+  <!-- ★ 曲リスト（全） -->
   <option>色彩</option>
   <option>よすが</option>
   <option>パレード</option>
@@ -210,7 +212,7 @@ const saveBtn    = document.getElementById("save-btn");
 const exportArea = document.getElementById("export-area");
 const username   = document.getElementById("username");
 
-// ====== スケール更新 ======
+// ====== スケール反映 ======
 function applyScaledSizes() {
   const size = CELL * scale;
   selector.style.width  = size + "px";
@@ -233,7 +235,7 @@ img.addEventListener("load", () => {
   window.addEventListener("resize", updateScale);
 });
 
-// ====== タップ判定共通処理 ======
+// ====== タップ判定 ======
 function handleTap(e) {
   const rect = wrapper.getBoundingClientRect();
   const clickX = (e.clientX - rect.left) / scale;
@@ -243,7 +245,7 @@ function handleTap(e) {
   const row = Math.floor((clickY - START_Y) / (CELL + GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
-  if (row === 2 && col === 2) return; // FREE無効
+  if (row === 2 && col === 2) return; // FREE 無効
 
   const x = (START_X + col * (CELL + GAP)) * scale;
   const y = (START_Y + row * (CELL + GAP)) * scale;
@@ -257,14 +259,13 @@ function handleTap(e) {
 
 // PC
 wrapper.addEventListener("click", handleTap);
-
-// iPhone Safari 用
+// iPhone Safari
 wrapper.addEventListener("touchstart", (e) => {
   const t = e.touches[0];
   handleTap({ clientX: t.clientX, clientY: t.clientY });
 });
 
-// ====== 曲名入力 ======
+// ====== 曲セット ======
 wordList.addEventListener("change", () => {
   if (!selected) return;
   if (selected.row === 2 && selected.col === 2) return;
@@ -296,70 +297,26 @@ wordList.addEventListener("change", () => {
   cell.textContent = word;
 });
 
-// ====== 保存処理 ======
+// ====== 保存 ======
 saveBtn.addEventListener("click", () => {
   exportArea.innerHTML = "";
 
   // 背景
   const bg = document.createElement("img");
   bg.src = "bingo_template.jpg";
+  bg.style.position = "absolute";
   bg.style.width = IMG_W + "px";
   bg.style.height = IMG_H + "px";
-  bg.style.position = "absolute";
   exportArea.appendChild(bg);
 
-  // 各マス
+  // 全マス
   for (const key in selections) {
     const [row, col] = key.split("-").map(Number);
-    if (row === 2 && col === 2) continue;
+    if (row === 2 && col === 2) continue; // FREE
 
     const word = selections[key];
+
     const box = document.createElement("div");
     box.style.position = "absolute";
     box.style.width = CELL + "px";
     box.style.height = CELL + "px";
-    box.style.left = (START_X + col * (CELL + GAP)) + "px";
-    box.style.top  = (START_Y + row * (CELL + GAP)) + "px";
-    box.style.display = "flex";
-    box.style.justifyContent = "center";
-    box.style.alignItems = "center";
-    box.style.fontSize = "32px";
-    box.style.fontWeight = "700";
-    box.style.fontFamily = "'Noto Sans JP', sans-serif";
-    box.textContent = word;
-
-    exportArea.appendChild(box);
-  }
-
-  // ====== ★ 右下に名前を入れる ======
-  const nameValue = username.value.trim();
-  if (nameValue !== "") {
-    const nameBox = document.createElement("div");
-    nameBox.style.position = "absolute";
-    nameBox.style.right = "20px";
-    nameBox.style.bottom = "20px";
-    nameBox.style.fontSize = "36px";
-    nameBox.style.fontWeight = "700";
-    nameBox.style.color = "black";
-    nameBox.style.fontFamily = "'Noto Sans JP', sans-serif";
-    nameBox.textContent = nameValue;
-
-    exportArea.appendChild(nameBox);
-  }
-
-  // ====== PNG 出力 ======
-  html2canvas(exportArea, {
-    useCORS: true,
-    allowTaint: true,
-    scale: 1
-  }).then(canvas => {
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = "bingo.png";
-    link.click();
-  });
-});
-</script>
-
-</body>
-</html>
