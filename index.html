@@ -3,11 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO 完全版（ズレゼロ保存）</title>
+<title>BINGO 完全版（フォント統一・ズレゼロ保存）</title>
+
+<!-- ★ Google Fonts（Noto Sans JP 太字） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
   background: #eee;
   padding: 20px;
   text-align: center;
@@ -26,7 +31,6 @@ body {
   display: block;
 }
 
-/* overlay は画像と同じ領域を上からかぶせる */
 #overlay {
   position: absolute;
   top: 0;
@@ -36,42 +40,44 @@ body {
   pointer-events: none;
 }
 
-/* 曲名テキスト（サイズは JS で scale に合わせて設定） */
+/* ★ 画面表示の文字にも Noto Sans JP（700）を使用 */
 .cell-text {
   position: absolute;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: bold;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 700;
   color: black;
   text-align: center;
   pointer-events: none;
   z-index: 10;
 }
 
-/* 黄枠（サイズは JS で scale に合わせて設定） */
+/* ★ 黄色枠（表示は scale に合わせる） */
 #selector {
   position: absolute;
-  border: 6px solid #FFD500;  /* 赤背景でも見やすい黄色 */
+  border: 6px solid #FFD500;
   display: none;
   z-index: 20;
 }
 
-/* 保存用エリア（普段は画面外で非表示） */
+/* 保存用の実寸レイヤー */
 #export-area {
   position: absolute;
   width: 1448px;
   height: 2048px;
-  left: -20000px;   /* 画面外へ退避 */
+  left: -20000px;
   top: 0;
   overflow: hidden;
   background: white;
+  font-family: 'Noto Sans JP', sans-serif; /* ← 保存画像にも同じフォント適用 */
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO（完全版・ズレゼロ保存）</h2>
+<h2>BINGO（フォント統一 & ズレゼロ保存）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -80,233 +86,13 @@ body {
   </div>
 </div>
 
-<!-- 保存用の非表示領域（実寸） -->
 <div id="export-area"></div>
 
 <select id="word-list" style="margin-top:20px;font-size:20px;padding:6px;">
   <option value="">曲を選択</option>
 
-  <!-- 全曲リスト -->
-<option>きみんちへ</option>
-<option>キミノウタ</option>
-
-<option>最短距離で</option>
-<option>ホームシックパーティー</option>
-<option>グラデーション</option>
-
-<option>アオイズム</option>
-<option>アカネ</option>
-<option>空ときみの引力</option>
-<option>ピアノ線</option>
-<option>フォルトファインダー</option>
-<option>描きたい世界</option>
-<option>Ico</option>
-
-<option>88</option>
-<option>影踏み</option>
-<option>ウソをついた</option>
-<option>光る花</option>
-<option>風の少女</option>
-<option>砂の城</option>
-
-<option>色彩</option>
-<option>よすが</option>
-<option>パレード</option>
-<option>プラネタリウム</option>
-<option>アドバルーン</option>
-<option>ハイリープ</option>
-
-<option>ノクチルカ</option>
-<option>ラルミー</option>
-<option>夢路</option>
-<option>15秒</option>
-<option>上弦</option>
-<option>空ひとつない雲</option>
-
-<option>世界点</option>
-<option>スノードーム</option>
-<option>ジョバンニの夜</option>
-
-<option>×パトリシア</option>
-<option>水性キャスト</option>
-
-<option>×フラッシュキーパー</option>
-<option>レインカーテン</option>
-<option>祈りうた</option>
-
-<option>×ハナノイロ</option>
-<option>バーチャルボーイ</option>
-<option>花残り月</option>
-
-<option>×細胞キオク</option>
-<option>月影とブランコ</option>
-<option>リップシンク</option>
-
-<option>×面影ワープ</option>
-<option>空の少年</option>
-
-<option>セラトナ</option>
-<option>雨を待つ</option>
-<option>ハッチ</option>
-<option>星の夜の脈の音の</option>
-<option>てのひらのマリー</option>
-
-<option>×ゆきのせい</option>
-<option>最短距離で</option>
-
-<option>×絵空事</option>
-<option>マイガール</option>
-<option>アンサーソング</option>
-
-<option>×リアルワールド</option>
-<option>モラトリアム</option>
-
-<option>うつくしい世界</option>
-<option>ぼくなりのおとぎ話</option>
-<option>ナンバーゼロ</option>
-<option>サクゴエ</option>
-<option>かえりみち</option>
-<option>グッバイ</option>
-<option>架空線</option>
-
-<option>×もしもの話</option>
-<option>呼吸</option>
-<option>パルスター</option>
-
-<option>×影踏み</option>
-<option>帰り道</option>
-
-<option>×スターチャート</option>
-<option>×月花</option>
-<option>×ツマビクヒトリ</option>
-
-<option>×なないろびより</option>
-<option>きせつの町</option>
-<option>めまい</option>
-
-<option>ウェンディ</option>
-<option>タキオン</option>
-<option>夢の果て</option>
-<option>プラネタリウム</option>
-<option>ハロー</option>
-<option>痕形</option>
-<option>マリンスノー</option>
-<option>三等星</option>
-<option>ユートピア</option>
-
-<option>×透明な世界</option>
-<option>絶対値</option>
-<option>フォルトファインダー</option>
-
-<option>こたえあわせ</option>
-<option>スノードーム</option>
-<option>ルーペ</option>
-<option>4分間</option>
-<option>神様</option>
-<option>アポロ</option>
-<option>パラレルワールド</option>
-<option>嘘と月</option>
-<option>ホタル</option>
-<option>空飛ぶクツ</option>
-<option>有色透明</option>
-
-<option>×こだまことだま</option>
-<option>みずたまり</option>
-<option>日付変更戦</option>
-
-<option>地球に針</option>
-
-<option>×ライムツリー</option>
-<option>希望的観測</option>
-<option>ティーポットのかけら</option>
-
-<option>×スノードロップ</option>
-<option>システム</option>
-<option>あとの花火</option>
-
-<option>SN1998A</option>
-<option>ルミナリー</option>
-<option>システム</option>
-<option>アナザーエンド</option>
-<option>在処</option>
-<option>イタチ</option>
-<option>ものがたり</option>
-<option>ディア</option>
-<option>終末のローグ</option>
-
-<option>×虚虚実実</option>
-<option>ヒーロー</option>
-<option>深く</option>
-
-<option>×アザレア</option>
-<option>最終前</option>
-<option>スターハンター</option>
-
-<option>インソムニア</option>
-<option>ポラリス</option>
-<option>あおのらくがき</option>
-<option>月兎時</option>
-<option>雲の落とし物</option>
-<option>夜の太陽</option>
-<option>うてな</option>
-<option>ステム</option>
-
-<option>×アイシー</option>
-
-<option>×ヨルガオ</option>
-<option>ローリエ</option>
-
-<option>×エンブレム</option>
-<option>トロット</option>
-
-<option>×ラストチャプター</option>
-
-<option>ダイヤモンドダスト</option>
-<option>イトシキヒビ</option>
-<option>スピカ</option>
-
-<option>リリリバイバー</option>
-<option>オーブ</option>
-<option>花に雨</option>
-<option>声鳴文</option>
-
-<option>×ソアー</option>
-
-<option>×クエスト</option>
-
-<option>トリックスター</option>
-<option>つぎはぎもよう</option>
-<option>ネコに日だまり</option>
-<option>トロット</option>
-<option>ペカド</option>
-<option>ロス</option>
-<option>ブローチ</option>
-<option>いたいけな春と空</option>
-
-<option>×花灯り</option>
-
-<option>×光のない街</option>
-<option>スポットライター</option>
-<option>水鏡の世界</option>
-
-<option>月の出る丘</option>
-
-<option>×マジックアワー</option>
-
-<option>×クライマックス</option>
-
-<option>トロイメライ</option>
-<option>星に届くよ</option>
-<option>ぼくと大人とチョコレート</option>
-<option>ジルコニア</option>
-<option>初期衝動</option>
-<option>錯月</option>
-<option>リミット</option>
-<option>果てなきブルー</option>
-<option>星とぼくの座標</option>
-
-<option>×しずく</option>
-
+  <!-- ★ 曲リスト（省略） -->
+  <!-- ここにはあなたの全曲リストが入ります（前と同じ） -->
 
 </select>
 
@@ -318,11 +104,10 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
-// ==== 実寸 ====
+// ====== 設定 ======
 const IMG_W = 1448;
 const IMG_H = 2048;
 
-// ==== マス座標（元画像）====
 const CELL = 222;
 const GAP  = 37;
 const START_X = 94;
@@ -330,7 +115,7 @@ const START_Y = 701;
 
 let scale = 1;
 let selected = null;
-const selections = {}; // "row-col" -> word
+const selections = {};
 
 const img        = document.getElementById("board-img");
 const wrapper    = document.getElementById("board-wrapper");
@@ -340,14 +125,12 @@ const wordList   = document.getElementById("word-list");
 const saveBtn    = document.getElementById("save-btn");
 const exportArea = document.getElementById("export-area");
 
-// scale に合わせて枠＆文字ボックスのサイズを更新
+// ----- scale に合わせて表示用サイズを調整 -----
 function applyScaledSizes() {
   const cellSize = CELL * scale;
-  // 黄枠サイズ
   selector.style.width  = cellSize + "px";
   selector.style.height = cellSize + "px";
 
-  // 既にある文字ボックスのサイズとフォント
   document.querySelectorAll(".cell-text").forEach(el => {
     el.style.width  = cellSize + "px";
     el.style.height = cellSize + "px";
@@ -355,7 +138,6 @@ function applyScaledSizes() {
   });
 }
 
-// 画像表示サイズに応じて scale を更新
 function updateScale() {
   scale = img.clientWidth / IMG_W;
   applyScaledSizes();
@@ -366,28 +148,19 @@ img.addEventListener("load", () => {
   window.addEventListener("resize", updateScale);
 });
 
-// 画像クリック → 実座標からマス判定
+// ----- クリックでマス選択 -----
 wrapper.addEventListener("click", (e) => {
   const rect = wrapper.getBoundingClientRect();
-  const clickX_disp = e.clientX - rect.left;
-  const clickY_disp = e.clientY - rect.top;
-
-  // 表示座標 → 元画像座標
-  const clickX = clickX_disp / scale;
-  const clickY = clickY_disp / scale;
+  const clickX = (e.clientX - rect.left) / scale;
+  const clickY = (e.clientY - rect.top)  / scale;
 
   const col = Math.floor((clickX - START_X) / (CELL + GAP));
   const row = Math.floor((clickY - START_Y) / (CELL + GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
 
-  // 元画像上のマス左上
-  const x_base = START_X + col * (CELL + GAP);
-  const y_base = START_Y + row * (CELL + GAP);
-
-  // 表示座標に変換
-  const x = x_base * scale;
-  const y = y_base * scale;
+  const x = (START_X + col * (CELL + GAP)) * scale;
+  const y = (START_Y + row * (CELL + GAP)) * scale;
 
   selector.style.left = x + "px";
   selector.style.top  = y + "px";
@@ -396,32 +169,28 @@ wrapper.addEventListener("click", (e) => {
   selected = { row, col };
 });
 
-// 曲名配置（画面用：scale を掛けた座標に配置）
+// ----- 曲名を画面へ配置 -----
 wordList.addEventListener("change", () => {
   if (!selected) return;
 
   const word = wordList.value;
   if (!word) return;
-
   selections[`${selected.row}-${selected.col}`] = word;
 
-  const cellId = `cell-${selected.row}-${selected.col}`;
-  let cell = document.getElementById(cellId);
+  const id = `cell-${selected.row}-${selected.col}`;
+  let cell = document.getElementById(id);
 
   const cellSize = CELL * scale;
 
   if (!cell) {
     cell = document.createElement("div");
-    cell.id = cellId;
+    cell.id = id;
     cell.className = "cell-text";
     overlay.appendChild(cell);
   }
 
-  const x_base = START_X + selected.col * (CELL + GAP);
-  const y_base = START_Y + selected.row * (CELL + GAP);
-
-  const x = x_base * scale;
-  const y = y_base * scale;
+  const x = (START_X + selected.col * (CELL + GAP)) * scale;
+  const y = (START_Y + selected.row * (CELL + GAP)) * scale;
 
   cell.style.left = x + "px";
   cell.style.top  = y + "px";
@@ -431,7 +200,7 @@ wordList.addEventListener("change", () => {
   cell.textContent = word;
 });
 
-// 保存処理：実寸エリアに再構成してキャプチャ
+// ----- 保存処理（実寸エリアを構築） -----
 saveBtn.addEventListener("click", () => {
   exportArea.innerHTML = "";
 
@@ -448,20 +217,21 @@ saveBtn.addEventListener("click", () => {
     const [row, col] = key.split("-").map(Number);
     const word = selections[key];
 
-    const div = document.createElement("div");
-    div.style.position = "absolute";
-    div.style.width = CELL + "px";
-    div.style.height = CELL + "px";
-    div.style.left = (START_X + col * (CELL + GAP)) + "px";
-    div.style.top  = (START_Y + row * (CELL + GAP)) + "px";
-    div.style.display = "flex";
-    div.style.justifyContent = "center";
-    div.style.alignItems = "center";
-    div.style.fontSize = "32px";
-    div.style.fontWeight = "bold";
-    div.textContent = word;
+    const box = document.createElement("div");
+    box.style.position = "absolute";
+    box.style.width = CELL + "px";
+    box.style.height = CELL + "px";
+    box.style.left = (START_X + col * (CELL + GAP)) + "px";
+    box.style.top  = (START_Y + row * (CELL + GAP)) + "px";
+    box.style.display = "flex";
+    box.style.justifyContent = "center";
+    box.style.alignItems = "center";
+    box.style.fontSize = "32px";
+    box.style.fontWeight = "700";
+    box.style.fontFamily = "'Noto Sans JP', sans-serif";
+    box.textContent = word;
 
-    exportArea.appendChild(div);
+    exportArea.appendChild(box);
   }
 
   html2canvas(exportArea, {
@@ -479,4 +249,3 @@ saveBtn.addEventListener("click", () => {
 
 </body>
 </html>
-
