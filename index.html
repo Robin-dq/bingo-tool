@@ -26,6 +26,7 @@ body {
   display: block;
 }
 
+/* overlay は画像と同じ領域を上からかぶせる */
 #overlay {
   position: absolute;
   top: 0;
@@ -35,15 +36,12 @@ body {
   pointer-events: none;
 }
 
-/* 曲名テキスト（表示用） */
+/* 曲名テキスト（サイズは JS で scale に合わせて設定） */
 .cell-text {
   position: absolute;
-  width: 222px;
-  height: 222px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 32px;
   font-weight: bold;
   color: black;
   text-align: center;
@@ -51,22 +49,20 @@ body {
   z-index: 10;
 }
 
-/* 赤背景でも見やすい黄色枠 */
+/* 黄枠（サイズは JS で scale に合わせて設定） */
 #selector {
   position: absolute;
-  width: 222px;
-  height: 222px;
-  border: 6px solid #FFD500;  /* 黄色 */
+  border: 6px solid #FFD500;  /* 赤背景でも見やすい黄色 */
   display: none;
   z-index: 20;
 }
 
-/* 保存用エリア（普段は非表示） */
+/* 保存用エリア（普段は画面外で非表示） */
 #export-area {
   position: absolute;
   width: 1448px;
   height: 2048px;
-  left: -20000px;   /* 画面外に追い出す */
+  left: -20000px;   /* 画面外へ退避 */
   top: 0;
   overflow: hidden;
   background: white;
@@ -126,7 +122,7 @@ body {
   <option>アンサーソング</option>
   <option>リアルワールド</option>
   <option>アドバルーン（再録）</option>
-  <option>モラトリウム</option>
+  <option>モラトリアム</option>
   <option>ゆきのせい</option>
   <option>うつくしい世界</option>
   <option>ぼくなりのおとぎ話</option>
@@ -195,18 +191,35 @@ const START_Y = 701;
 
 let scale = 1;
 let selected = null;
-const selections = {}; // row-col: word
+const selections = {}; // "row-col" -> word
 
-const img = document.getElementById("board-img");
-const wrapper = document.getElementById("board-wrapper");
-const overlay = document.getElementById("overlay");
-const selector = document.getElementById("selector");
-const wordList = document.getElementById("word-list");
-const saveBtn = document.getElementById("save-btn");
+const img        = document.getElementById("board-img");
+const wrapper    = document.getElementById("board-wrapper");
+const overlay    = document.getElementById("overlay");
+const selector   = document.getElementById("selector");
+const wordList   = document.getElementById("word-list");
+const saveBtn    = document.getElementById("save-btn");
 const exportArea = document.getElementById("export-area");
 
+// scale に合わせて枠＆文字ボックスのサイズを更新
+function applyScaledSizes() {
+  const cellSize = CELL * scale;
+  // 黄枠サイズ
+  selector.style.width  = cellSize + "px";
+  selector.style.height = cellSize + "px";
+
+  // 既にある文字ボックスのサイズとフォント
+  document.querySelectorAll(".cell-text").forEach(el => {
+    el.style.width  = cellSize + "px";
+    el.style.height = cellSize + "px";
+    el.style.fontSize = (32 * scale) + "px";
+  });
+}
+
+// 画像表示サイズに応じて scale を更新
 function updateScale() {
   scale = img.clientWidth / IMG_W;
+  applyScaledSizes();
 }
 
 img.addEventListener("load", () => {
@@ -214,11 +227,13 @@ img.addEventListener("load", () => {
   window.addEventListener("resize", updateScale);
 });
 
+// 画像クリック → 実座標からマス判定
 wrapper.addEventListener("click", (e) => {
   const rect = wrapper.getBoundingClientRect();
   const clickX_disp = e.clientX - rect.left;
   const clickY_disp = e.clientY - rect.top;
 
+  // 表示座標 → 元画像座標
   const clickX = clickX_disp / scale;
   const clickY = clickY_disp / scale;
 
@@ -227,24 +242,34 @@ wrapper.addEventListener("click", (e) => {
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
 
-  const x = (START_X + col * (CELL + GAP)) * scale;
-  const y = (START_Y + row * (CELL + GAP)) * scale;
+  // 元画像上のマス左上
+  const x_base = START_X + col * (CELL + GAP);
+  const y_base = START_Y + row * (CELL + GAP);
+
+  // 表示座標に変換
+  const x = x_base * scale;
+  const y = y_base * scale;
 
   selector.style.left = x + "px";
-  selector.style.top = y + "px";
+  selector.style.top  = y + "px";
   selector.style.display = "block";
 
   selected = { row, col };
 });
 
+// 曲名配置（画面用：scale を掛けた座標に配置）
 wordList.addEventListener("change", () => {
   if (!selected) return;
 
   const word = wordList.value;
+  if (!word) return;
+
   selections[`${selected.row}-${selected.col}`] = word;
 
   const cellId = `cell-${selected.row}-${selected.col}`;
   let cell = document.getElementById(cellId);
+
+  const cellSize = CELL * scale;
 
   if (!cell) {
     cell = document.createElement("div");
@@ -253,15 +278,21 @@ wordList.addEventListener("change", () => {
     overlay.appendChild(cell);
   }
 
-  const x = (START_X + selected.col * (CELL + GAP)) * scale;
-  const y = (START_Y + selected.row * (CELL + GAP)) * scale;
+  const x_base = START_X + selected.col * (CELL + GAP);
+  const y_base = START_Y + selected.row * (CELL + GAP);
+
+  const x = x_base * scale;
+  const y = y_base * scale;
 
   cell.style.left = x + "px";
-  cell.style.top = y + "px";
+  cell.style.top  = y + "px";
+  cell.style.width  = cellSize + "px";
+  cell.style.height = cellSize + "px";
+  cell.style.fontSize = (32 * scale) + "px";
   cell.textContent = word;
 });
 
-// 保存処理（実寸レイヤーで再構築）
+// 保存処理：実寸エリアに再構成してキャプチャ
 saveBtn.addEventListener("click", () => {
   exportArea.innerHTML = "";
 
@@ -283,7 +314,7 @@ saveBtn.addEventListener("click", () => {
     div.style.width = CELL + "px";
     div.style.height = CELL + "px";
     div.style.left = (START_X + col * (CELL + GAP)) + "px";
-    div.style.top = (START_Y + row * (CELL + GAP)) + "px";
+    div.style.top  = (START_Y + row * (CELL + GAP)) + "px";
     div.style.display = "flex";
     div.style.justifyContent = "center";
     div.style.alignItems = "center";
