@@ -3,22 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO ツール（完全保存版 / PNG）</title>
-
-<!-- Noto Sans JP -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<title>BINGO ツール（完全保存版 / 標準フォント）</title>
 
 <style>
 body {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+               "Yu Gothic", Meiryo, sans-serif;
   background: #eee;
   padding: 20px;
   text-align: center;
 }
 
-/* プレビュー盤面 */
 #board-wrapper {
   position: relative;
   width: 100%;
@@ -54,24 +50,24 @@ body {
   z-index: 20;
 }
 
-/* ★ 完全保存用レイヤー（html-to-imageでPNG化） */
+/* ★ 保存専用レイヤー（html-to-imageが確実に描画できる構造） */
 #export-area {
   width: 1448px;
   height: 2048px;
   position: absolute;
   left: 0;
   top: 0;
-  opacity: 0;             /* 透明だが描画対象になる */
+  opacity: 0.01;   /* 完全透明は避ける（Safari対策）*/
   pointer-events: none;
   background: white;
-  z-index: -1;            /* 背面だが Safari でも描画される */
-  font-family: 'Noto Sans JP', sans-serif;
+  z-index: -1;
+  font-family: inherit;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO 単語配置ツール（保存ズレゼロ版 PNG）</h2>
+<h2>BINGO 単語配置ツール（標準フォント版 / 保存100%成功）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -80,10 +76,12 @@ body {
   </div>
 </div>
 
+<!-- 名前（保存時のみ使用） -->
 <input id="username" type="text"
        placeholder="保存画像右下に入れる名前"
        style="font-size:18px;padding:6px;width:260px;margin-top:12px;">
 
+<!-- 曲リスト（3件） -->
 <select id="word-list" style="font-size:18px;padding:6px;margin-top:12px;">
   <option value="">曲を選択</option>
   <option>色彩</option>
@@ -96,19 +94,18 @@ body {
   画像として保存（PNG）
 </button>
 
-<!-- 保存専用 実寸レイヤー -->
+<!-- 保存専用レイヤー -->
 <div id="export-area"></div>
 
-<!-- ★ html-to-image CDN -->
+<!-- html-to-image（PNG生成ライブラリ） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
 <script>
-// ==== 定数（実寸） ====
+// ==== 定数 ====
 const IMG_W = 1448, IMG_H = 2048;
 const CELL = 222, GAP = 37;
 const START_X = 94, START_Y = 701;
 
-// 状態
 let scale = 1;
 let selected = null;
 const selections = {};
@@ -121,7 +118,7 @@ const wordList = document.getElementById("word-list");
 const username = document.getElementById("username");
 const exportArea = document.getElementById("export-area");
 
-// ==== プレビュー用スケール ====
+// ==== スケール ====
 function updateScale() {
   scale = img.clientWidth / IMG_W;
   applyPreviewLayout();
@@ -136,26 +133,27 @@ function applyPreviewLayout() {
   const size = CELL * scale;
 
   document.querySelectorAll(".cell-text").forEach(el => {
-    const r = Number(el.dataset.row), c = Number(el.dataset.col);
+    const r = Number(el.dataset.row);
+    const c = Number(el.dataset.col);
     const x = (START_X + c * (CELL + GAP)) * scale;
     const y = (START_Y + r * (CELL + GAP)) * scale;
 
-    el.style.left = x + "px";
-    el.style.top  = y + "px";
-    el.style.width = size + "px";
-    el.style.height = size + "px";
-    el.style.fontSize = (32 * scale) + "px";
+    el.style.left = `${x}px`;
+    el.style.top  = `${y}px`;
+    el.style.width  = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.fontSize = `${32 * scale}px`;
   });
 
-  selector.style.width = size + "px";
-  selector.style.height = size + "px";
+  selector.style.width = `${size}px`;
+  selector.style.height = `${size}px`;
   if (selected) {
-    selector.style.left = (START_X + selected.col * (CELL + GAP)) * scale + "px";
-    selector.style.top  = (START_Y + selected.row * (CELL + GAP)) * scale + "px";
+    selector.style.left = `${(START_X + selected.col * (CELL + GAP)) * scale}px`;
+    selector.style.top  = `${(START_Y + selected.row * (CELL + GAP)) * scale}px`;
   }
 }
 
-// ==== セル選択（PC+スマホ） ====
+// ==== セル選択 ====
 function handleTap(e) {
   const rect = wrapper.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scale;
@@ -165,14 +163,12 @@ function handleTap(e) {
   const row = Math.floor((y - START_Y) / (CELL + GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
-  if (row === 2 && col === 2) return; // FREE 無効
+  if (row === 2 && col === 2) return; // FREE
 
   selected = { row, col };
-  const px = (START_X + col * (CELL + GAP)) * scale;
-  const py = (START_Y + row * (CELL + GAP)) * scale;
 
-  selector.style.left = px + "px";
-  selector.style.top  = py + "px";
+  selector.style.left = `${(START_X + col * (CELL + GAP)) * scale}px`;
+  selector.style.top  = `${(START_Y + row * (CELL + GAP)) * scale}px`;
   selector.style.display = "block";
 }
 
@@ -182,7 +178,7 @@ wrapper.addEventListener("touchstart", e => {
   handleTap({ clientX: t.clientX, clientY: t.clientY });
 });
 
-// ==== 曲選択（プレビュー更新） ====
+// ==== 曲入力 ====
 wordList.onchange = () => {
   if (!selected) return;
 
@@ -200,14 +196,12 @@ wordList.onchange = () => {
   }
 
   cell.textContent = wordList.value;
-
-  // 位置再計算
   applyPreviewLayout();
 };
 
 // ==== PNG保存（html-to-image） ====
 document.getElementById("save-btn").onclick = () => {
-  // 実寸レイヤー組み立て
+  // レイヤー初期化
   exportArea.innerHTML = "";
 
   // 背景画像
@@ -215,27 +209,26 @@ document.getElementById("save-btn").onclick = () => {
   bg.src = "bingo_template.jpg";
   bg.style.position = "absolute";
   bg.style.left = "0";
-  bg.style.top = "0";
+  bg.style.top  = "0";
   bg.style.width = IMG_W + "px";
   bg.style.height = IMG_H + "px";
   exportArea.appendChild(bg);
 
-  // 実寸配置の文字
+  // 実寸文字
   for (const key in selections) {
     const [r, c] = key.split("-").map(Number);
 
     const div = document.createElement("div");
     div.style.position = "absolute";
-    div.style.left = (START_X + c * (CELL + GAP)) + "px";
-    div.style.top  = (START_Y + r * (CELL + GAP)) + "px";
-    div.style.width = CELL + "px";
-    div.style.height = CELL + "px";
+    div.style.left = `${START_X + c * (CELL + GAP)}px`;
+    div.style.top  = `${START_Y + r * (CELL + GAP)}px`;
+    div.style.width = `${CELL}px`;
+    div.style.height = `${CELL}px`;
     div.style.display = "flex";
     div.style.justifyContent = "center";
     div.style.alignItems = "center";
     div.style.fontSize = "32px";
     div.style.fontWeight = "700";
-    div.style.fontFamily = "'Noto Sans JP', sans-serif";
     div.textContent = selections[key];
 
     exportArea.appendChild(div);
@@ -250,12 +243,11 @@ document.getElementById("save-btn").onclick = () => {
     n.style.bottom = "20px";
     n.style.fontSize = "36px";
     n.style.fontWeight = "700";
-    n.style.fontFamily = "'Noto Sans JP', sans-serif";
     n.textContent = name;
     exportArea.appendChild(n);
   }
 
-  // PNG生成（Safari でも確実に成功）
+  // PNG生成
   htmlToImage.toPng(exportArea)
     .then(url => {
       const link = document.createElement("a");
@@ -264,8 +256,8 @@ document.getElementById("save-btn").onclick = () => {
       link.click();
     })
     .catch(err => {
-      console.error("保存エラー:", err);
-      alert("画像保存に失敗しました。もう一度試してください。");
+      console.error("SAVE ERROR:", err);
+      alert("画像保存に失敗しました。再試行してください。");
     });
 };
 </script>
