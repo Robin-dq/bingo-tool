@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO ツール（完全保存版 / 標準フォント）</title>
+<title>BINGO ツール（保存完全対応版）</title>
 
 <style>
 body {
@@ -50,24 +50,23 @@ body {
   z-index: 20;
 }
 
-/* ★ 保存専用レイヤー（html-to-imageが確実に描画できる構造） */
+/* 保存専用レイヤー（透明だが描画される） */
 #export-area {
   width: 1448px;
   height: 2048px;
   position: absolute;
   left: 0;
   top: 0;
-  opacity: 0.01;   /* 完全透明は避ける（Safari対策）*/
+  opacity: 0.01;
   pointer-events: none;
   background: white;
   z-index: -1;
-  font-family: inherit;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO 単語配置ツール（標準フォント版 / 保存100%成功）</h2>
+<h2>BINGO 単語配置ツール（保存100%成功版）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -76,12 +75,10 @@ body {
   </div>
 </div>
 
-<!-- 名前（保存時のみ使用） -->
 <input id="username" type="text"
        placeholder="保存画像右下に入れる名前"
        style="font-size:18px;padding:6px;width:260px;margin-top:12px;">
 
-<!-- 曲リスト（3件） -->
 <select id="word-list" style="font-size:18px;padding:6px;margin-top:12px;">
   <option value="">曲を選択</option>
   <option>色彩</option>
@@ -94,14 +91,12 @@ body {
   画像として保存（PNG）
 </button>
 
-<!-- 保存専用レイヤー -->
 <div id="export-area"></div>
 
-<!-- html-to-image（PNG生成ライブラリ） -->
+<!-- html-to-image -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
 <script>
-// ==== 定数 ====
 const IMG_W = 1448, IMG_H = 2048;
 const CELL = 222, GAP = 37;
 const START_X = 94, START_Y = 701;
@@ -118,7 +113,18 @@ const wordList = document.getElementById("word-list");
 const username = document.getElementById("username");
 const exportArea = document.getElementById("export-area");
 
-// ==== スケール ====
+/* 画像ロード用 Promise */
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const i = new Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = src;
+  });
+}
+
+/* プレビュー座標更新 */
 function updateScale() {
   scale = img.clientWidth / IMG_W;
   applyPreviewLayout();
@@ -138,22 +144,23 @@ function applyPreviewLayout() {
     const x = (START_X + c * (CELL + GAP)) * scale;
     const y = (START_Y + r * (CELL + GAP)) * scale;
 
-    el.style.left = `${x}px`;
-    el.style.top  = `${y}px`;
-    el.style.width  = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.fontSize = `${32 * scale}px`;
+    el.style.left = x + "px";
+    el.style.top  = y + "px";
+    el.style.width = size + "px";
+    el.style.height = size + "px";
+    el.style.fontSize = (32 * scale) + "px";
   });
 
-  selector.style.width = `${size}px`;
-  selector.style.height = `${size}px`;
+  selector.style.width = size + "px";
+  selector.style.height = size + "px";
+
   if (selected) {
-    selector.style.left = `${(START_X + selected.col * (CELL + GAP)) * scale}px`;
-    selector.style.top  = `${(START_Y + selected.row * (CELL + GAP)) * scale}px`;
+    selector.style.left = ((START_X + selected.col * (CELL + GAP)) * scale) + "px";
+    selector.style.top  = ((START_Y + selected.row * (CELL + GAP)) * scale) + "px";
   }
 }
 
-// ==== セル選択 ====
+/* セルタップ */
 function handleTap(e) {
   const rect = wrapper.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scale;
@@ -167,8 +174,8 @@ function handleTap(e) {
 
   selected = { row, col };
 
-  selector.style.left = `${(START_X + col * (CELL + GAP)) * scale}px`;
-  selector.style.top  = `${(START_Y + row * (CELL + GAP)) * scale}px`;
+  selector.style.left = ((START_X + col * (CELL + GAP)) * scale) + "px";
+  selector.style.top  = ((START_Y + row * (CELL + GAP)) * scale) + "px";
   selector.style.display = "block";
 }
 
@@ -178,7 +185,7 @@ wrapper.addEventListener("touchstart", e => {
   handleTap({ clientX: t.clientX, clientY: t.clientY });
 });
 
-// ==== 曲入力 ====
+/* 曲入力 */
 wordList.onchange = () => {
   if (!selected) return;
 
@@ -199,14 +206,16 @@ wordList.onchange = () => {
   applyPreviewLayout();
 };
 
-// ==== PNG保存（html-to-image） ====
-document.getElementById("save-btn").onclick = () => {
-  // レイヤー初期化
+/* PNG保存 */
+document.getElementById("save-btn").onclick = async () => {
+
   exportArea.innerHTML = "";
 
-  // 背景画像
+  // ★ 背景画像ロードを待つ（黒くならないための必須処理）
+  const bgImg = await loadImage("bingo_template.jpg");
+
   const bg = document.createElement("img");
-  bg.src = "bingo_template.jpg";
+  bg.src = bgImg.src;
   bg.style.position = "absolute";
   bg.style.left = "0";
   bg.style.top  = "0";
@@ -214,7 +223,7 @@ document.getElementById("save-btn").onclick = () => {
   bg.style.height = IMG_H + "px";
   exportArea.appendChild(bg);
 
-  // 実寸文字
+  // 文字配置（実寸）
   for (const key in selections) {
     const [r, c] = key.split("-").map(Number);
 
@@ -234,7 +243,7 @@ document.getElementById("save-btn").onclick = () => {
     exportArea.appendChild(div);
   }
 
-  // 右下名前
+  // 名前
   const name = username.value.trim();
   if (name) {
     const n = document.createElement("div");
@@ -247,18 +256,18 @@ document.getElementById("save-btn").onclick = () => {
     exportArea.appendChild(n);
   }
 
-  // PNG生成
-  htmlToImage.toPng(exportArea)
-    .then(url => {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "bingo.png";
-      link.click();
-    })
-    .catch(err => {
-      console.error("SAVE ERROR:", err);
-      alert("画像保存に失敗しました。再試行してください。");
-    });
+  // PNG生成（真っ黒防止の背景色指定）
+  htmlToImage.toPng(exportArea, {
+    backgroundColor: "#ffffff"
+  }).then(url => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "bingo.png";
+    link.click();
+  }).catch(err => {
+    console.error(err);
+    alert("保存に失敗しました。再度お試しください。");
+  });
 };
 </script>
 
