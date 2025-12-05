@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO ツール（保存完全対応版）</title>
+<title>BINGOツール（Canvas保存版）</title>
 
 <style>
 body {
@@ -17,9 +17,8 @@ body {
 
 #board-wrapper {
   position: relative;
-  width: 100%;
   max-width: 1448px;
-  margin: 16px auto;
+  margin: 0 auto;
 }
 
 #board-img {
@@ -27,57 +26,33 @@ body {
   display: block;
 }
 
-#overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.cell-text {
-  position: absolute;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 700;
-  color: black;
-  z-index: 10;
-}
-
 #selector {
   position: absolute;
   border: 6px solid #FFD500;
   display: none;
   z-index: 20;
+  pointer-events: none;
 }
 
-/* 保存専用レイヤー（透明だが描画される） */
-#export-area {
-  width: 1448px;
-  height: 2048px;
+.cell-text {
   position: absolute;
-  left: 0;
-  top: 0;
-  opacity: 0.01;
+  font-weight: bold;
+  color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   pointer-events: none;
-  background: white;
-  z-index: -1;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO 単語配置ツール（保存100%成功版）</h2>
+<h2>BINGO単語配置ツール（Canvas保存で100%成功）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
-  <div id="overlay">
-    <div id="selector"></div>
-  </div>
+  <div id="selector"></div>
 </div>
-
-<input id="username" type="text"
-       placeholder="保存画像右下に入れる名前"
-       style="font-size:18px;padding:6px;width:260px;margin-top:12px;">
 
 <select id="word-list" style="font-size:18px;padding:6px;margin-top:12px;">
   <option value="">曲を選択</option>
@@ -86,17 +61,19 @@ body {
   <option>パレード</option>
 </select>
 
+<br>
+<input id="username" type="text"
+       placeholder="右下に入れる名前"
+       style="font-size:18px;padding:6px;width:260px;margin-top:12px;">
+
+<br>
 <button id="save-btn"
         style="margin-top:16px;padding:10px 20px;font-size:18px;">
-  画像として保存（PNG）
+  PNGとして保存
 </button>
 
-<div id="export-area"></div>
-
-<!-- html-to-image -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
-
 <script>
+/* 固定サイズ */
 const IMG_W = 1448, IMG_H = 2048;
 const CELL = 222, GAP = 37;
 const START_X = 94, START_Y = 701;
@@ -107,60 +84,40 @@ const selections = {};
 
 const img = document.getElementById("board-img");
 const wrapper = document.getElementById("board-wrapper");
-const overlay = document.getElementById("overlay");
 const selector = document.getElementById("selector");
 const wordList = document.getElementById("word-list");
 const username = document.getElementById("username");
-const exportArea = document.getElementById("export-area");
 
-/* 画像ロード用 Promise */
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const i = new Image();
-    i.crossOrigin = "anonymous";
-    i.onload = () => resolve(i);
-    i.onerror = reject;
-    i.src = src;
-  });
-}
+/* 画像読み込み後にスケールを決定 */
+img.onload = () => updateScale();
+window.addEventListener("resize", updateScale);
 
-/* プレビュー座標更新 */
 function updateScale() {
   scale = img.clientWidth / IMG_W;
-  applyPreviewLayout();
+  updateTexts();
 }
 
-img.onload = () => {
-  updateScale();
-  window.addEventListener("resize", updateScale);
-};
-
-function applyPreviewLayout() {
-  const size = CELL * scale;
-
+/* プレビュー文字配置更新 */
+function updateTexts() {
   document.querySelectorAll(".cell-text").forEach(el => {
     const r = Number(el.dataset.row);
     const c = Number(el.dataset.col);
-    const x = (START_X + c * (CELL + GAP)) * scale;
-    const y = (START_Y + r * (CELL + GAP)) * scale;
-
-    el.style.left = x + "px";
-    el.style.top  = y + "px";
-    el.style.width = size + "px";
-    el.style.height = size + "px";
-    el.style.fontSize = (32 * scale) + "px";
+    el.style.left = (START_X + c*(CELL+GAP)) * scale + "px";
+    el.style.top  = (START_Y + r*(CELL+GAP)) * scale + "px";
+    el.style.width  = CELL * scale + "px";
+    el.style.height = CELL * scale + "px";
+    el.style.fontSize = 32 * scale + "px";
   });
 
-  selector.style.width = size + "px";
-  selector.style.height = size + "px";
-
   if (selected) {
-    selector.style.left = ((START_X + selected.col * (CELL + GAP)) * scale) + "px";
-    selector.style.top  = ((START_Y + selected.row * (CELL + GAP)) * scale) + "px";
+    selector.style.left = (START_X + selected.col*(CELL+GAP)) * scale + "px";
+    selector.style.top  = (START_Y + selected.row*(CELL+GAP)) * scale + "px";
+    selector.style.width  = CELL * scale + "px";
+    selector.style.height = CELL * scale + "px";
   }
 }
 
-/* セルタップ */
+/* タップ処理 */
 function handleTap(e) {
   const rect = wrapper.getBoundingClientRect();
   const x = (e.clientX - rect.left) / scale;
@@ -170,13 +127,15 @@ function handleTap(e) {
   const row = Math.floor((y - START_Y) / (CELL + GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
-  if (row === 2 && col === 2) return; // FREE
+  if (row === 2 && col === 2) return; // FREE無効
 
   selected = { row, col };
 
-  selector.style.left = ((START_X + col * (CELL + GAP)) * scale) + "px";
-  selector.style.top  = ((START_Y + row * (CELL + GAP)) * scale) + "px";
   selector.style.display = "block";
+  selector.style.left = (START_X + col*(CELL+GAP)) * scale + "px";
+  selector.style.top  = (START_Y + row*(CELL+GAP)) * scale + "px";
+  selector.style.width = CELL * scale + "px";
+  selector.style.height = CELL * scale + "px";
 }
 
 wrapper.addEventListener("click", handleTap);
@@ -185,89 +144,75 @@ wrapper.addEventListener("touchstart", e => {
   handleTap({ clientX: t.clientX, clientY: t.clientY });
 });
 
-/* 曲入力 */
+/* 曲選択 */
 wordList.onchange = () => {
   if (!selected) return;
 
   const key = `${selected.row}-${selected.col}`;
   selections[key] = wordList.value;
 
-  let cell = document.getElementById("cell-" + key);
-  if (!cell) {
-    cell = document.createElement("div");
-    cell.id = "cell-" + key;
-    cell.className = "cell-text";
-    cell.dataset.row = selected.row;
-    cell.dataset.col = selected.col;
-    overlay.appendChild(cell);
+  let el = document.getElementById("cell-" + key);
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "cell-text";
+    el.id = "cell-" + key;
+    el.dataset.row = selected.row;
+    el.dataset.col = selected.col;
+    wrapper.appendChild(el);
   }
 
-  cell.textContent = wordList.value;
-  applyPreviewLayout();
+  el.textContent = wordList.value;
+  updateTexts();
 };
 
-/* PNG保存 */
+/* PNG保存（Canvasで描画） */
 document.getElementById("save-btn").onclick = async () => {
 
-  exportArea.innerHTML = "";
+  // Canvas作成
+  const canvas = document.createElement("canvas");
+  canvas.width = IMG_W;
+  canvas.height = IMG_H;
+  const ctx = canvas.getContext("2d");
 
-  // ★ 背景画像ロードを待つ（黒くならないための必須処理）
-  const bgImg = await loadImage("bingo_template.jpg");
+  // 背景画像ロード
+  const bg = new Image();
+  bg.crossOrigin = "anonymous";
+  bg.src = "bingo_template.jpg";
 
-  const bg = document.createElement("img");
-  bg.src = bgImg.src;
-  bg.style.position = "absolute";
-  bg.style.left = "0";
-  bg.style.top  = "0";
-  bg.style.width = IMG_W + "px";
-  bg.style.height = IMG_H + "px";
-  exportArea.appendChild(bg);
+  await new Promise(res => bg.onload = res);
 
-  // 文字配置（実寸）
+  // 背景描画
+  ctx.drawImage(bg, 0, 0, IMG_W, IMG_H);
+
+  // 文字描画
+  ctx.font = "bold 48px sans-serif";
+  ctx.fillStyle = "#000";
+
   for (const key in selections) {
     const [r, c] = key.split("-").map(Number);
+    const txt = selections[key];
 
-    const div = document.createElement("div");
-    div.style.position = "absolute";
-    div.style.left = `${START_X + c * (CELL + GAP)}px`;
-    div.style.top  = `${START_Y + r * (CELL + GAP)}px`;
-    div.style.width = `${CELL}px`;
-    div.style.height = `${CELL}px`;
-    div.style.display = "flex";
-    div.style.justifyContent = "center";
-    div.style.alignItems = "center";
-    div.style.fontSize = "32px";
-    div.style.fontWeight = "700";
-    div.textContent = selections[key];
+    const x = START_X + c*(CELL+GAP) + CELL/2;
+    const y = START_Y + r*(CELL+GAP) + CELL/2 + 20;
 
-    exportArea.appendChild(div);
+    ctx.textAlign = "center";
+    ctx.fillText(txt, x, y);
   }
 
-  // 名前
+  // 名前描画（右下）
   const name = username.value.trim();
   if (name) {
-    const n = document.createElement("div");
-    n.style.position = "absolute";
-    n.style.right = "20px";
-    n.style.bottom = "20px";
-    n.style.fontSize = "36px";
-    n.style.fontWeight = "700";
-    n.textContent = name;
-    exportArea.appendChild(n);
+    ctx.textAlign = "right";
+    ctx.fillText(name, IMG_W - 30, IMG_H - 30);
   }
 
-  // PNG生成（真っ黒防止の背景色指定）
-  htmlToImage.toPng(exportArea, {
-    backgroundColor: "#ffffff"
-  }).then(url => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "bingo.png";
-    link.click();
-  }).catch(err => {
-    console.error(err);
-    alert("保存に失敗しました。再度お試しください。");
-  });
+  // 保存
+  const url = canvas.toDataURL("image/png");
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "bingo.png";
+  link.click();
 };
 </script>
 
