@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BINGO 完全安定版</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #eee;
+  padding: 20px;
+  text-align: center;
+}
+
+#board-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1448px;
+  margin: 0 auto;
+}
+
+#board-img {
+  width: 100%;
+  display: block;
+}
+
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1448px;
+  height: 2048px;
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.cell-text {
+  position: absolute;
+  width: 222px;
+  height: 222px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: black;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#selector {
+  position: absolute;
+  width: 222px;
+  height: 222px;
+  border: 6px solid red;
+  display: none;
+  z-index: 20;
+}
+</style>
+</head>
+<body>
+
+<h2>BINGO（完全安定版 / 座標逆算方式）</h2>
+
+<div id="board-wrapper">
+  <img id="board-img" src="bingo_template.jpg">
+  <div id="overlay">
+    <div id="selector"></div>
+  </div>
+</div>
+
+<select id="word-list" style="margin-top:20px;font-size:20px;padding:6px;">
+  <option value="">単語を選択</option>
+  <option>色彩</option>
+  <option>よすが</option>
+  <!-- 全単語追加してOK -->
+</select>
+
+<button id="save-btn"
+style="margin-top:20px;padding:10px 20px;font-size:18px;">
+画像として保存
+</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// ---- 実寸 ----
+const IMG_W = 1448;
+const IMG_H = 2048;
+
+// ---- あなたの測定値 ----
+const CELL = 222;
+const GAP  = 37;
+const START_X = 94;
+const START_Y = 701;
+
+let scale = 1;
+let selected = null;
+
+const img = document.getElementById("board-img");
+const wrapper = document.getElementById("board-wrapper");
+const overlay = document.getElementById("overlay");
+const selector = document.getElementById("selector");
+const wordList = document.getElementById("word-list");
+
+// スケール更新
+function updateScale() {
+  scale = img.clientWidth / IMG_W;
+  overlay.style.transform = `scale(${scale})`;
+}
+
+img.onload = () => {
+  updateScale();
+  window.addEventListener("resize", updateScale);
+};
+
+// 画像タップ時に座標からマスを逆算
+wrapper.addEventListener("click", (e) => {
+  const rect = wrapper.getBoundingClientRect();
+
+  const clickX = (e.clientX - rect.left) / scale;
+  const clickY = (e.clientY - rect.top) / scale;
+
+  // マス範囲外チェック
+  if (clickX < START_X || clickY < START_Y) return;
+
+  const col = Math.floor((clickX - START_X) / (CELL + GAP));
+  const row = Math.floor((clickY - START_Y) / (CELL + GAP));
+
+  if (col < 0 || col > 4 || row < 0 || row > 4) return;
+
+  const x = START_X + col * (CELL + GAP);
+  const y = START_Y + row * (CELL + GAP);
+
+  selector.style.left = x + "px";
+  selector.style.top = y + "px";
+  selector.style.display = "block";
+
+  selected = {x, y, row, col};
+});
+
+// 単語配置
+wordList.addEventListener("change", () => {
+  if (!selected) return;
+
+  const word = wordList.value;
+  const id = `cell-${selected.row}-${selected.col}`;
+  let div = document.getElementById(id);
+
+  if (!div) {
+    div = document.createElement("div");
+    div.id = id;
+    div.className = "cell-text";
+    overlay.appendChild(div);
+  }
+
+  div.style.left = selected.x + "px";
+  div.style.top  = selected.y + "px";
+  div.textContent = word;
+});
+
+// PNG保存
+document.getElementById("save-btn").addEventListener("click", () => {
+  html2canvas(document.querySelector("#board-wrapper")).then(canvas => {
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = "bingo.png";
+    link.click();
+  });
+});
+</script>
+
+</body>
+</html>
