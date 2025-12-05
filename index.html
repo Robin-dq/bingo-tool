@@ -3,16 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO 完全版</title>
-
-<!-- フォント（Noto Sans JP。後で変更OK） -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<title>BINGO 完全版（ズレ修正）</title>
 
 <style>
 body {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #eee;
   padding: 20px;
   text-align: center;
@@ -25,38 +20,35 @@ body {
   margin: 0 auto;
 }
 
+/* 画像は幅100%で表示 */
 #board-img {
   width: 100%;
   height: auto;
   display: block;
 }
 
-/* 実寸の画像にかぶせるレイヤー */
+/* overlay は画像と同じサイズ（transformは使わない） */
 #overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1448px;
-  height: 2048px;
-  transform-origin: top left;
-  pointer-events: none; /* 子要素はクリック可 */
+  width: 100%;   /* wrapperと同じ幅 */
+  height: 100%;  /* wrapperと同じ高さ（画像の高さ） */
+  pointer-events: none;
 }
 
-/* 曲名テキスト（中央配置） */
+/* 曲名テキスト：赤枠と同じ座標に置く */
 .cell-text {
   position: absolute;
   width: 222px;
   height: 222px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 32px;
   font-weight: bold;
   color: black;
   text-align: center;
-
-  /* ★ 縦位置のズレ原因になっていた中央寄せを削除！ */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
   pointer-events: none;
   z-index: 10;
 }
@@ -70,15 +62,14 @@ body {
   display: none;
   z-index: 20;
 }
-
 </style>
 </head>
 <body>
 
-<h2>BINGO（完全版）</h2>
+<h2>BINGO（完全版・ズレ修正版）</h2>
 
 <div id="board-wrapper">
-  <img id="board-img" src="bingo_template.jpg" crossOrigin="anonymous">
+  <img id="board-img" src="bingo_template.jpg">
   <div id="overlay">
     <div id="selector"></div>
   </div>
@@ -170,75 +161,86 @@ body {
   <option>果てなきブルー</option>
   <option>星とぼくの座標</option>
   <option>しずく</option>
-
 </select>
 
 <button id="save-btn"
-style="margin-top:20px;padding:10px 20px;font-size:18px;">
-画像として保存
+        style="margin-top:20px;padding:10px 20px;font-size:18px;">
+  画像として保存
 </button>
 
-<!-- html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
-// ==== 実寸 ====
+// ==== 元画像の実寸 ====
 const IMG_W = 1448;
 const IMG_H = 2048;
 
-// ==== マス座標 ====
+// ==== マス座標（元画像上の値）====
 const CELL = 222;
 const GAP  = 37;
 const START_X = 94;
 const START_Y = 701;
 
-let scale = 1;
+let scale = 1;      // 表示サイズ / 実寸
 let selected = null;
 
-const img = document.getElementById("board-img");
-const wrapper = document.getElementById("board-wrapper");
-const overlay = document.getElementById("overlay");
+const img      = document.getElementById("board-img");
+const wrapper  = document.getElementById("board-wrapper");
+const overlay  = document.getElementById("overlay");
 const selector = document.getElementById("selector");
 const wordList = document.getElementById("word-list");
+const saveBtn  = document.getElementById("save-btn");
 
-// スケール更新
+// 画像表示サイズに応じて scale を更新
 function updateScale() {
   scale = img.clientWidth / IMG_W;
-  overlay.style.transform = `scale(${scale})`;
 }
 
-img.onload = () => {
+// 画像読み込み後に scale 計算
+img.addEventListener("load", () => {
   updateScale();
   window.addEventListener("resize", updateScale);
-};
+});
 
-// 画像タップ → マス計算
+// 画像の上をクリック → 実座標に変換してマス判定
 wrapper.addEventListener("click", (e) => {
   const rect = wrapper.getBoundingClientRect();
 
-  const clickX = (e.clientX - rect.left) / scale;
-  const clickY = (e.clientY - rect.top) / scale;
+  // 画面上のクリック位置（wrapper左上基準の表示座標）
+  const clickX_disp = e.clientX - rect.left;
+  const clickY_disp = e.clientY - rect.top;
+
+  // 表示座標 → 元画像座標へ変換
+  const clickX = clickX_disp / scale;
+  const clickY = clickY_disp / scale;
 
   const col = Math.floor((clickX - START_X) / (CELL + GAP));
   const row = Math.floor((clickY - START_Y) / (CELL + GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
 
-  const x = START_X + col * (CELL + GAP);
-  const y = START_Y + row * (CELL + GAP);
+  // 元画像上のマス左上座標
+  const x_base = START_X + col * (CELL + GAP);
+  const y_base = START_Y + row * (CELL + GAP);
+
+  // 表示上の座標にスケーリング
+  const x = x_base * scale;
+  const y = y_base * scale;
 
   selector.style.left = x + "px";
-  selector.style.top = y + "px";
+  selector.style.top  = y + "px";
   selector.style.display = "block";
 
   selected = { x, y, row, col };
 });
 
-// 曲名配置
+// 曲名配置（赤枠と同じ表示座標に置く）
 wordList.addEventListener("change", () => {
   if (!selected) return;
 
   const word = wordList.value;
+  if (!word) return;
+
   const id = `cell-${selected.row}-${selected.col}`;
   let div = document.getElementById(id);
 
@@ -254,8 +256,8 @@ wordList.addEventListener("change", () => {
   div.textContent = word;
 });
 
-// PNG保存（赤枠非表示 → 保存 → 復元）
-document.getElementById("save-btn").addEventListener("click", () => {
+// PNG保存（保存時だけ赤枠を消す）
+saveBtn.addEventListener("click", () => {
   const wasVisible = selector.style.display !== "none";
   selector.style.display = "none";
 
@@ -278,4 +280,3 @@ document.getElementById("save-btn").addEventListener("click", () => {
 
 </body>
 </html>
-
