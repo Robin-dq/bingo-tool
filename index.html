@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO 完全版（ズレ修正）</title>
+<title>BINGO 完全版（ズレゼロ保存）</title>
 
 <style>
 body {
@@ -20,24 +20,22 @@ body {
   margin: 0 auto;
 }
 
-/* 画像は幅100%で表示 */
 #board-img {
   width: 100%;
   height: auto;
   display: block;
 }
 
-/* overlay は画像と同じサイズ（transformは使わない） */
 #overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;   /* wrapperと同じ幅 */
-  height: 100%;  /* wrapperと同じ高さ（画像の高さ） */
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
-/* 曲名テキスト：赤枠と同じ座標に置く */
+/* 曲名テキスト（表示用） */
 .cell-text {
   position: absolute;
   width: 222px;
@@ -53,20 +51,31 @@ body {
   z-index: 10;
 }
 
-/* 赤枠 */
+/* 赤背景でも見やすい黄色枠 */
 #selector {
   position: absolute;
   width: 222px;
   height: 222px;
-  border: 6px solid red;
+  border: 6px solid #FFD500;  /* 黄色 */
   display: none;
   z-index: 20;
+}
+
+/* 保存用エリア（普段は非表示） */
+#export-area {
+  position: absolute;
+  width: 1448px;
+  height: 2048px;
+  left: -20000px;   /* 画面外に追い出す */
+  top: 0;
+  overflow: hidden;
+  background: white;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO（完全版・ズレ修正版）</h2>
+<h2>BINGO（完全版・ズレゼロ保存）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -75,10 +84,13 @@ body {
   </div>
 </div>
 
-<!-- 楽曲リスト（全曲） -->
+<!-- 保存用の非表示領域（実寸） -->
+<div id="export-area"></div>
+
 <select id="word-list" style="margin-top:20px;font-size:20px;padding:6px;">
   <option value="">曲を選択</option>
 
+  <!-- 全曲リスト -->
   <option>色彩</option>
   <option>よすが</option>
   <option>パレード</option>
@@ -114,7 +126,7 @@ body {
   <option>アンサーソング</option>
   <option>リアルワールド</option>
   <option>アドバルーン（再録）</option>
-  <option>モラトリアム</option>
+  <option>モラトリウム</option>
   <option>ゆきのせい</option>
   <option>うつくしい世界</option>
   <option>ぼくなりのおとぎ話</option>
@@ -171,46 +183,42 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
-// ==== 元画像の実寸 ====
+// ==== 実寸 ====
 const IMG_W = 1448;
 const IMG_H = 2048;
 
-// ==== マス座標（元画像上の値）====
+// ==== マス座標（元画像）====
 const CELL = 222;
 const GAP  = 37;
 const START_X = 94;
 const START_Y = 701;
 
-let scale = 1;      // 表示サイズ / 実寸
+let scale = 1;
 let selected = null;
+const selections = {}; // row-col: word
 
-const img      = document.getElementById("board-img");
-const wrapper  = document.getElementById("board-wrapper");
-const overlay  = document.getElementById("overlay");
+const img = document.getElementById("board-img");
+const wrapper = document.getElementById("board-wrapper");
+const overlay = document.getElementById("overlay");
 const selector = document.getElementById("selector");
 const wordList = document.getElementById("word-list");
-const saveBtn  = document.getElementById("save-btn");
+const saveBtn = document.getElementById("save-btn");
+const exportArea = document.getElementById("export-area");
 
-// 画像表示サイズに応じて scale を更新
 function updateScale() {
   scale = img.clientWidth / IMG_W;
 }
 
-// 画像読み込み後に scale 計算
 img.addEventListener("load", () => {
   updateScale();
   window.addEventListener("resize", updateScale);
 });
 
-// 画像の上をクリック → 実座標に変換してマス判定
 wrapper.addEventListener("click", (e) => {
   const rect = wrapper.getBoundingClientRect();
-
-  // 画面上のクリック位置（wrapper左上基準の表示座標）
   const clickX_disp = e.clientX - rect.left;
   const clickY_disp = e.clientY - rect.top;
 
-  // 表示座標 → 元画像座標へ変換
   const clickX = clickX_disp / scale;
   const clickY = clickY_disp / scale;
 
@@ -219,61 +227,82 @@ wrapper.addEventListener("click", (e) => {
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
 
-  // 元画像上のマス左上座標
-  const x_base = START_X + col * (CELL + GAP);
-  const y_base = START_Y + row * (CELL + GAP);
-
-  // 表示上の座標にスケーリング
-  const x = x_base * scale;
-  const y = y_base * scale;
+  const x = (START_X + col * (CELL + GAP)) * scale;
+  const y = (START_Y + row * (CELL + GAP)) * scale;
 
   selector.style.left = x + "px";
-  selector.style.top  = y + "px";
+  selector.style.top = y + "px";
   selector.style.display = "block";
 
-  selected = { x, y, row, col };
+  selected = { row, col };
 });
 
-// 曲名配置（赤枠と同じ表示座標に置く）
 wordList.addEventListener("change", () => {
   if (!selected) return;
 
   const word = wordList.value;
-  if (!word) return;
+  selections[`${selected.row}-${selected.col}`] = word;
 
-  const id = `cell-${selected.row}-${selected.col}`;
-  let div = document.getElementById(id);
+  const cellId = `cell-${selected.row}-${selected.col}`;
+  let cell = document.getElementById(cellId);
 
-  if (!div) {
-    div = document.createElement("div");
-    div.id = id;
-    div.className = "cell-text";
-    overlay.appendChild(div);
+  if (!cell) {
+    cell = document.createElement("div");
+    cell.id = cellId;
+    cell.className = "cell-text";
+    overlay.appendChild(cell);
   }
 
-  div.style.left = selected.x + "px";
-  div.style.top  = selected.y + "px";
-  div.textContent = word;
+  const x = (START_X + selected.col * (CELL + GAP)) * scale;
+  const y = (START_Y + selected.row * (CELL + GAP)) * scale;
+
+  cell.style.left = x + "px";
+  cell.style.top = y + "px";
+  cell.textContent = word;
 });
 
-// PNG保存（保存時だけ赤枠を消す）
+// 保存処理（実寸レイヤーで再構築）
 saveBtn.addEventListener("click", () => {
-  const wasVisible = selector.style.display !== "none";
-  selector.style.display = "none";
+  exportArea.innerHTML = "";
 
-  html2canvas(document.querySelector("#board-wrapper"), {
+  const bg = document.createElement("img");
+  bg.src = "bingo_template.jpg";
+  bg.style.width = IMG_W + "px";
+  bg.style.height = IMG_H + "px";
+  bg.style.position = "absolute";
+  bg.style.left = "0";
+  bg.style.top = "0";
+  exportArea.appendChild(bg);
+
+  for (const key in selections) {
+    const [row, col] = key.split("-").map(Number);
+    const word = selections[key];
+
+    const div = document.createElement("div");
+    div.style.position = "absolute";
+    div.style.width = CELL + "px";
+    div.style.height = CELL + "px";
+    div.style.left = (START_X + col * (CELL + GAP)) + "px";
+    div.style.top = (START_Y + row * (CELL + GAP)) + "px";
+    div.style.display = "flex";
+    div.style.justifyContent = "center";
+    div.style.alignItems = "center";
+    div.style.fontSize = "32px";
+    div.style.fontWeight = "bold";
+    div.textContent = word;
+
+    exportArea.appendChild(div);
+  }
+
+  html2canvas(exportArea, {
     useCORS: true,
     allowTaint: true,
-    scale: 2
+    scale: 1
   }).then(canvas => {
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
     link.download = "bingo.png";
     link.click();
-
-    if (wasVisible) {
-      selector.style.display = "block";
-    }
   });
 });
 </script>
