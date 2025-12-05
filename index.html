@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>いのちのもんしょう 予想BINGO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BINGOツール（長押し保存対応版）</title>
 
 <style>
 body {
@@ -30,8 +30,8 @@ body {
   position: absolute;
   border: 6px solid #FFD500;
   display: none;
-  z-index: 20;
   pointer-events: none;
+  z-index: 20;
 }
 
 .cell-text {
@@ -43,13 +43,29 @@ body {
   align-items: center;
   pointer-events: none;
   text-align: center;
-  white-space: pre-wrap;
+}
+
+#saved-image-wrapper {
+  margin-top: 20px;
+  display: none;
+}
+
+#saved-image {
+  width: 90%;
+  max-width: 1448px;
+  border: 2px solid #ccc;
+}
+
+#save-hint {
+  font-size: 18px;
+  margin-top: 10px;
+  display: none;
 }
 </style>
 </head>
 <body>
 
-<h2>BINGO単語配置ツール（最終Canvas保存完全対応版）</h2>
+<h2>BINGO単語配置ツール（長押し保存対応）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -283,17 +299,22 @@ body {
 
 <br>
 <input id="username" type="text"
-       placeholder="お名前"
+       placeholder="右下に入れる名前"
        style="font-size:18px;padding:6px;width:260px;margin-top:12px;">
 
 <br>
 <button id="save-btn"
         style="margin-top:16px;padding:10px 20px;font-size:18px;">
-  PNGとして保存
+  PNG生成（長押し保存）
 </button>
 
+<div id="saved-image-wrapper">
+  <img id="saved-image" src="">
+  <div id="save-hint">📌 この画像を長押しして「写真に追加」を選択してください</div>
+</div>
+
 <script>
-/* 固定サイズ */
+/* 固有サイズ */
 const IMG_W = 1448, IMG_H = 2048;
 const CELL = 222, GAP = 37;
 const START_X = 94, START_Y = 701;
@@ -308,33 +329,33 @@ const selector = document.getElementById("selector");
 const wordList = document.getElementById("word-list");
 const username = document.getElementById("username");
 
-/* Canvas用 折り返し関数 */
+/* 折り返し描画 */
 function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
   const chars = [...text];
   let line = "";
   let lines = [];
 
   for (let i = 0; i < chars.length; i++) {
-    const testLine = line + chars[i];
-    if (ctx.measureText(testLine).width > maxWidth) {
+    const test = line + chars[i];
+    if (ctx.measureText(test).width > maxWidth) {
       lines.push(line);
       line = chars[i];
       if (lines.length >= maxLines) break;
     } else {
-      line = testLine;
+      line = test;
     }
   }
   if (lines.length < maxLines) lines.push(line);
 
-  const totalHeight = lines.length * lineHeight;
-  const startY = y - totalHeight / 2 + lineHeight * 0.85;
+  const total = lines.length * lineHeight;
+  const startY = y - total / 2 + lineHeight * 0.85;
 
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], x, startY + i * lineHeight);
   }
 }
 
-/* プレビュー更新 */
+/* スケール計算 */
 img.onload = () => updateScale();
 window.addEventListener("resize", updateScale);
 
@@ -368,11 +389,11 @@ function handleTap(e) {
   const x = (e.clientX - rect.left) / scale;
   const y = (e.clientY - rect.top) / scale;
 
-  const col = Math.floor((x - START_X) / (CELL + GAP));
-  const row = Math.floor((y - START_Y) / (CELL + GAP));
+  const col = Math.floor((x - START_X) / (CELL+GAP));
+  const row = Math.floor((y - START_Y) / (CELL+GAP));
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
-  if (row === 2 && col === 2) return; // FREE無効
+  if (row === 2 && col === 2) return;
 
   selected = { row, col };
 
@@ -389,7 +410,7 @@ wrapper.addEventListener("touchstart", e => {
   handleTap({ clientX: t.clientX, clientY: t.clientY });
 });
 
-/* 曲選択 */
+/* 曲選択表示 */
 wordList.onchange = () => {
   if (!selected) return;
 
@@ -399,8 +420,8 @@ wordList.onchange = () => {
   let el = document.getElementById("cell-" + key);
   if (!el) {
     el = document.createElement("div");
-    el.className = "cell-text";
     el.id = "cell-" + key;
+    el.className = "cell-text";
     el.dataset.row = selected.row;
     el.dataset.col = selected.col;
     wrapper.appendChild(el);
@@ -410,25 +431,21 @@ wordList.onchange = () => {
   updateTexts();
 };
 
-/* PNG保存（Canvas） */
+/* PNG生成 → 画面表示（長押し保存用） */
 document.getElementById("save-btn").onclick = async () => {
 
-  // Canvas作成
   const canvas = document.createElement("canvas");
   canvas.width = IMG_W;
   canvas.height = IMG_H;
   const ctx = canvas.getContext("2d");
 
-  // 背景画像ロード
   const bg = new Image();
   bg.crossOrigin = "anonymous";
   bg.src = "bingo_template.jpg";
   await new Promise(res => bg.onload = res);
 
-  // 背景描画
   ctx.drawImage(bg, 0, 0, IMG_W, IMG_H);
 
-  // 文字描画
   ctx.font = "bold 36px sans-serif";
   ctx.fillStyle = "#000";
   ctx.textAlign = "center";
@@ -443,22 +460,24 @@ document.getElementById("save-btn").onclick = async () => {
     drawWrappedText(ctx, txt, x, y, CELL - 20, 40, 2);
   }
 
-  // 名前描画（右下）
   const name = username.value.trim();
   if (name) {
     ctx.textAlign = "right";
     ctx.fillText(name, IMG_W - 30, IMG_H - 30);
   }
 
-  // 保存
   const url = canvas.toDataURL("image/png");
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "bingo.png";
-  link.click();
+
+  // 長押し保存用に表示する
+  const savedImg = document.getElementById("saved-image");
+  savedImg.src = url;
+
+  document.getElementById("saved-image-wrapper").style.display = "block";
+  document.getElementById("save-hint").style.display = "block";
+
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 };
 </script>
 
 </body>
 </html>
-
