@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BINGO 完全版（FREE無効・フォント統一・ズレゼロ保存）</title>
+<title>BINGO 完全版（Safari対応・FREE無効・ズレゼロ保存）</title>
 
-<!-- ★ Google Fonts：Noto Sans JP（太字） -->
+<!-- Noto Sans JP 太字 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
@@ -23,6 +23,7 @@ body {
   width: 100%;
   max-width: 1448px;
   margin: 0 auto;
+  pointer-events: auto; /* Safari対策 */
 }
 
 #board-img {
@@ -40,7 +41,6 @@ body {
   pointer-events: none;
 }
 
-/* ★ 表示用テキスト（サイズは scale に合わせて JS が更新） */
 .cell-text {
   position: absolute;
   display: flex;
@@ -54,7 +54,6 @@ body {
   z-index: 10;
 }
 
-/* ★ 黄色枠（クリック選択時に表示） */
 #selector {
   position: absolute;
   border: 6px solid #FFD500;
@@ -62,7 +61,7 @@ body {
   z-index: 20;
 }
 
-/* ★ 保存用（実寸: 1448×2048） */
+/* 保存用実寸 */
 #export-area {
   position: absolute;
   width: 1448px;
@@ -77,7 +76,7 @@ body {
 </head>
 <body>
 
-<h2>BINGO（FREE無効・ズレゼロ保存・Notoフォント）</h2>
+<h2>BINGO（iPhone対応・FREE無効・Notoフォント）</h2>
 
 <div id="board-wrapper">
   <img id="board-img" src="bingo_template.jpg">
@@ -86,13 +85,12 @@ body {
   </div>
 </div>
 
-<!-- 実寸保存用レイヤー -->
 <div id="export-area"></div>
 
 <select id="word-list" style="margin-top:20px;font-size:20px;padding:6px;">
   <option value="">曲を選択</option>
 
-  <!-- ★ あなたの全曲リスト（省略せずそのまま残しています） -->
+  <!-- ★ 全曲リスト（あなたが提供したもの） -->
   <option>色彩</option>
   <option>よすが</option>
   <option>パレード</option>
@@ -175,7 +173,6 @@ body {
   <option>果てなきブルー</option>
   <option>星とぼくの座標</option>
   <option>しずく</option>
-
 </select>
 
 <button id="save-btn"
@@ -207,15 +204,15 @@ const wordList   = document.getElementById("word-list");
 const saveBtn    = document.getElementById("save-btn");
 const exportArea = document.getElementById("export-area");
 
-// ====== 画面表示用サイズ調整 ======
+// ====== 表示用サイズ調整 ======
 function applyScaledSizes() {
-  const cellSize = CELL * scale;
-  selector.style.width  = cellSize + "px";
-  selector.style.height = cellSize + "px";
+  const size = CELL * scale;
+  selector.style.width  = size + "px";
+  selector.style.height = size + "px";
 
   document.querySelectorAll(".cell-text").forEach(el => {
-    el.style.width  = cellSize + "px";
-    el.style.height = cellSize + "px";
+    el.style.width  = size + "px";
+    el.style.height = size + "px";
     el.style.fontSize = (32 * scale) + "px";
   });
 }
@@ -230,8 +227,8 @@ img.addEventListener("load", () => {
   window.addEventListener("resize", updateScale);
 });
 
-// ====== クリック → マス選択 ======
-wrapper.addEventListener("click", (e) => {
+// ====== タップ処理本体（click と touchstart 共通） ======
+function handleTap(e) {
   const rect = wrapper.getBoundingClientRect();
   const clickX = (e.clientX - rect.left) / scale;
   const clickY = (e.clientY - rect.top)  / scale;
@@ -241,7 +238,7 @@ wrapper.addEventListener("click", (e) => {
 
   if (col < 0 || col > 4 || row < 0 || row > 4) return;
 
-  // ★ FREE マス（中央）は無効化
+  // FREE（中央）は無効
   if (row === 2 && col === 2) return;
 
   const x = (START_X + col * (CELL + GAP)) * scale;
@@ -252,13 +249,25 @@ wrapper.addEventListener("click", (e) => {
   selector.style.display = "block";
 
   selected = { row, col };
+}
+
+// PC用クリック
+wrapper.addEventListener("click", handleTap);
+
+// ★ iPhone Safari用：touchstart
+wrapper.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  handleTap({
+    clientX: t.clientX,
+    clientY: t.clientY
+  });
 });
 
 // ====== 曲名入力 ======
 wordList.addEventListener("change", () => {
   if (!selected) return;
 
-  // ★ FREE マスは入力禁止
+  // FREE 無効
   if (selected.row === 2 && selected.col === 2) return;
 
   const word = wordList.value;
@@ -269,7 +278,7 @@ wordList.addEventListener("change", () => {
   const id = `cell-${selected.row}-${selected.col}`;
   let cell = document.getElementById(id);
 
-  const cellSize = CELL * scale;
+  const size = CELL * scale;
   const x = (START_X + selected.col * (CELL + GAP)) * scale;
   const y = (START_Y + selected.row * (CELL + GAP)) * scale;
 
@@ -282,13 +291,13 @@ wordList.addEventListener("change", () => {
 
   cell.style.left = x + "px";
   cell.style.top  = y + "px";
-  cell.style.width  = cellSize + "px";
-  cell.style.height = cellSize + "px";
+  cell.style.width  = size + "px";
+  cell.style.height = size + "px";
   cell.style.fontSize = (32 * scale) + "px";
   cell.textContent = word;
 });
 
-// ====== 保存（実寸で再構築してキャプチャ） ======
+// ====== 保存：実寸レイヤー構築 ======
 saveBtn.addEventListener("click", () => {
   exportArea.innerHTML = "";
 
@@ -304,12 +313,12 @@ saveBtn.addEventListener("click", () => {
   for (const key in selections) {
     const [row, col] = key.split("-").map(Number);
 
-    // ★ FREE マスは保存対象外
+    // FREE は保存しない
     if (row === 2 && col === 2) continue;
 
     const word = selections[key];
-
     const box = document.createElement("div");
+
     box.style.position = "absolute";
     box.style.width = CELL + "px";
     box.style.height = CELL + "px";
